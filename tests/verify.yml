@@ -1,0 +1,44 @@
+---
+# Functional checks from the post. Run after site.yml:
+#   ansible-playbook tests/verify.yml
+- name: Verify DNSSEC validation
+  hosts: resolvers
+  gather_facts: false
+  tasks:
+    - name: Query a signed domain
+      ansible.builtin.command: dig @127.0.0.1 cloudflare.com +dnssec
+      register: verify_signed
+      changed_when: false
+      # A freshly restarted resolver needs a few seconds to prime the root keys.
+      until: verify_signed.stdout is search('flags:.* ad[ ;]')
+      retries: 10
+      delay: 3
+
+    - name: Query the deliberately broken domain
+      ansible.builtin.command: dig @127.0.0.1 dnssec-failed.org
+      register: verify_broken
+      changed_when: false
+
+    - name: Query the broken domain with checking disabled
+      ansible.builtin.command: dig @127.0.0.1 dnssec-failed.org +cd
+      register: verify_broken_cd
+      changed_when: false
+
+    - name: Run the DNSSEC health check script
+      ansible.builtin.command: /usr/local/bin/check-dnssec.sh
+      register: verify_script
+      changed_when: false
+
+    - name: Read the managed trust anchors
+      ansible.builtin.command: rndc managed-keys status
+      register: verify_keys
+      changed_when: false
+
+    - name: Check the results
+      ansible.builtin.assert:
+        that:
+          - verify_signed.stdout is search('flags:.* ad[ ;]')
+          - verify_broken.stdout is search('status. SERVFAIL')
+          - verify_broken_cd.stdout is search('status. NOERROR')
+          - verify_script.stdout is search('^OK')
+          - verify_keys.stdout is search('keyid. 38696')

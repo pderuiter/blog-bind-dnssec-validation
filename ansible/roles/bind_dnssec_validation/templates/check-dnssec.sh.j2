@@ -1,0 +1,14 @@
+#!/bin/bash
+# /usr/local/bin/check-dnssec.sh
+# {{ ansible_managed }}
+
+RESULT=$(dig @localhost cloudflare.com +dnssec +short 2>&1)
+AD_FLAG=$(dig @localhost cloudflare.com | grep -cE "flags:.* ad[ ;]")
+
+if [ $AD_FLAG -eq 0 ]; then
+    echo "CRITICAL: DNSSEC validation not working"
+    exit 2
+fi
+
+echo "OK: DNSSEC validation operational"
+exit 0

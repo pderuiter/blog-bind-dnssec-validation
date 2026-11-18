@@ -1,0 +1,84 @@
+// {{ bind_install_options_conf }}
+// {{ ansible_managed }}
+
+acl "trusted" {
+{% for net in bind_dnssec_validation_trusted_networks %}
+    {{ net }};
+{% endfor %}
+};
+{% if bind_dnssec_validation_mode == 'yes' %}
+
+trust-anchors {
+    // KSK-2017 (20326), still published in the root zone during the rollover
+    . initial-key 257 3 8 "AwEAAaz/tAm8yTn4Mfeh5eyI96WSVexTBAvkMgJzkKTOiW1vkIbzxeF3
+        +/4RgWOq7HrxRixHlFlExOLAJr5emLvN7SWXgnLh4+B5xQlNVz8Og8kv
+        ArMtNROxVQuCaSnIDdD5LKyWbRd2n9WGe2R8PzgCmr3EgVLrjyBxWezF
+        0jLHwVN8efS3rCj/EWgvIWgb9tarpVUDK/b58Da+sqqls3eNbuv7pr+e
+        oZG+SrDK6nWeL3c6H5Apxz7LjVc1uTIdsIXxuOLYA4/ilBmSVIzuDWfd
+        RUfhHdY6+cn8HFRm+2hM8AnXGXws9555KrUB5qihylGa8subX2Nn6UwN
+        R1AkUTV74bU=";
+    // KSK-2024 (38696), the key that signs the root DNSKEY set
+    . initial-ds 38696 8 2 "683D2D0ACB8C9B712A1948B27F741219298D0A450D612C483AF444A4C0FB2B16";
+};
+{% endif %}
+
+options {
+    directory "{{ bind_install_data_dir }}";
+    pid-file "/run/named/named.pid";
+
+    // Network settings
+    listen-on port 53 { any; };
+    listen-on-v6 port 53 { any; };
+
+    // Recursion settings
+    recursion yes;
+    allow-recursion { trusted; };
+    allow-query-cache { trusted; };
+
+    // DNSSEC validation
+    dnssec-validation {{ bind_dnssec_validation_mode }};
+{% if bind_dnssec_validation_except | length > 0 %}
+    validate-except {
+{% for domain in bind_dnssec_validation_except %}
+        "{{ domain }}";
+{% endfor %}
+    };
+{% endif %}
+
+    // EDNS settings for DNSSEC
+    edns-udp-size {{ bind_dnssec_validation_edns_udp_size }};
+    max-udp-size {{ bind_dnssec_validation_edns_udp_size }};
+
+    // Security
+    version "{{ bind_dnssec_validation_version }}";
+    minimal-responses yes;
+
+    // Performance
+    prefetch {{ bind_dnssec_validation_prefetch }};
+};
+
+logging {
+    channel default_log {
+        file "{{ bind_dnssec_validation_log_dir }}/named.log" versions 5 size 10m;
+        severity info;
+        print-time yes;
+        print-severity yes;
+    };
+
+    channel dnssec_log {
+        file "{{ bind_dnssec_validation_log_dir }}/dnssec.log" versions 5 size 10m;
+        severity {{ bind_dnssec_validation_dnssec_log_severity }};
+        print-time yes;
+        print-category yes;
+    };
+
+    category default { default_log; };
+    category dnssec { dnssec_log; };
+};
+{% if ansible_facts['os_family'] == 'RedHat' %}
+
+zone "." {
+    type hint;
+    file "named.ca";
+};
+{% endif %}

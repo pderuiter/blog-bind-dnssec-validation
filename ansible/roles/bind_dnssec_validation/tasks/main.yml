@@ -1,0 +1,39 @@
+---
+- name: Validate role variables
+  ansible.builtin.assert:
+    that:
+      - bind_dnssec_validation_mode in ['auto', 'yes']
+    fail_msg: "bind_dnssec_validation_mode must be auto or yes"
+    quiet: true
+
+- name: Create the BIND log directory
+  ansible.builtin.file:
+    path: "{{ bind_dnssec_validation_log_dir }}"
+    state: directory
+    owner: "{{ bind_install_user }}"
+    group: "{{ bind_install_group }}"
+    mode: "0750"
+
+- name: Configure the resolver with DNSSEC validation
+  ansible.builtin.template:
+    src: named.conf.j2
+    dest: "{{ bind_install_options_conf }}"
+    owner: root
+    group: "{{ bind_install_group }}"
+    mode: "0640"
+    validate: named-checkconf %s
+  notify: Restart named
+
+- name: Install the DNSSEC health check script
+  ansible.builtin.template:
+    src: check-dnssec.sh.j2
+    dest: /usr/local/bin/check-dnssec.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: bind_dnssec_validation_install_check_script
+
+- name: Start named
+  ansible.builtin.service:
+    name: "{{ bind_install_service }}"
+    state: started

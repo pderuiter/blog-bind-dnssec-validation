@@ -1,0 +1,15 @@
+---
+bind_dnssec_validation_trusted_networks:
+  - localhost
+  - localnets
+  - 192.168.0.0/16
+  - 10.0.0.0/8
+# auto: built-in managed root trust anchor. yes: explicit trust-anchors block (both root KSKs).
+bind_dnssec_validation_mode: auto
+bind_dnssec_validation_except: []
+bind_dnssec_validation_edns_udp_size: 1232
+bind_dnssec_validation_version: "not disclosed"
+bind_dnssec_validation_prefetch: "10 60"
+bind_dnssec_validation_log_dir: /var/log/named
+bind_dnssec_validation_dnssec_log_severity: debug
+bind_dnssec_validation_install_check_script: true

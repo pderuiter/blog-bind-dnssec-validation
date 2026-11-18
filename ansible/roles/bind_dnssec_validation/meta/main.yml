@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: bind_dnssec_validation
+  author: Patrick de Ruiter
+  description: BIND recursive resolver with DNSSEC validation
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+    - name: EL
+      versions:
+        - "9"
+dependencies: []

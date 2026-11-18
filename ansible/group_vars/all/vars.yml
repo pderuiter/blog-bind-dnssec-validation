@@ -1,0 +1,13 @@
+---
+# Networks allowed to use the resolver (acl "trusted").
+bind_dnssec_validation_trusted_networks:
+  - localhost
+  - localnets
+  - 192.168.0.0/16
+  - 10.0.0.0/8
+
+# auto = built-in root trust anchor (RFC 5011), yes = the explicit trust-anchors block from the post.
+bind_dnssec_validation_mode: auto
+
+# Domains to exclude from validation permanently (validate-except).
+bind_dnssec_validation_except: []
